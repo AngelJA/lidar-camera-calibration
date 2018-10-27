@@ -1,0 +1,6 @@
+usb_cam
+/root/ws/devel/.private/usb_cam/share/usb_cam/cmake/usb_camConfig.cmake /root/ws/devel/share/usb_cam/cmake/usb_camConfig.cmake
+/root/ws/devel/.private/usb_cam/share/usb_cam/cmake/usb_camConfig-version.cmake /root/ws/devel/share/usb_cam/cmake/usb_camConfig-version.cmake
+/root/ws/devel/.private/usb_cam/lib/libusb_cam.so /root/ws/devel/lib/libusb_cam.so
+/root/ws/devel/.private/usb_cam/lib/pkgconfig/usb_cam.pc /root/ws/devel/lib/pkgconfig/usb_cam.pc
+/root/ws/devel/.private/usb_cam/lib/usb_cam/usb_cam_node /root/ws/devel/lib/usb_cam/usb_cam_node

@@ -1,0 +1,19 @@
+<launch>
+  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+    <param name="video_device" value="/dev/video3" />
+    <param name="image_width" value="640" />
+    <param name="image_height" value="480" />
+    <param name="pixel_format" value="yuyv" />
+    <param name="camera_frame_id" value="usb_cam" />
+    <param name="io_method" value="mmap"/>
+    <param name="camera_info_url" value="file://$(find calib_test)/cfg/head_camera.yaml" />
+  </node>
+  <include file="$(find velodyne_pointcloud)/launch/VLP-32C_points.launch" />
+  <node name="visualization" pkg="rviz" type="rviz" args="-d $(find calib_test)/cfg/config.rviz" />
+  <arg name="qx" value="-0.5" />
+  <arg name="qy" value="0.5" />
+  <arg name="qz" value="-0.5" />
+  <arg name="qw" value="0.5" />
+  <node name="laser_camera_tf" pkg="tf" type="static_transform_publisher" args="0 0 0 $(arg qx) $(arg qy) $(arg qz) $(arg qw) velodyne usb_cam 100" />
+  <node name="test" pkg="calib_test" type="calib" output="screen" />
+</launch>

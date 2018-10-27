@@ -1,0 +1,26 @@
+#! /usr/bin/env python
+
+import rospy
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+import cv2
+
+class LaserCamCalib(object):
+    def __init__(self):
+        self._bridge = CvBridge()
+
+        rospy.Subscriber('/usb_cam/image_raw', Image, self.image_cb)
+        self._img_pub = rospy.Publisher('/calib_test/img', Image, queue_size=1)
+        rospy.spin()
+
+    def image_cb(self, msg):
+        cv_image = self._bridge.imgmsg_to_cv2(msg, msg.encoding)
+        mono = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+        #TODO don't hardcode board dims
+        res = cv2.findChessboardCorners(mono, (10, 7), 
+            flags = cv2.CALIB_CB_ADAPTIVE_THRESH | cv2.CALIB_CB_NORMALIZE_IMAGE | cv2.CALIB_CB_FAST_CHECK)
+        rospy.loginfo('corners detected: {:d}'.format(len(res[1])))
+
+if __name__ == '__main__':
+    rospy.init_node('calib_test', anonymous=True)
+    LaserCamCalib()
