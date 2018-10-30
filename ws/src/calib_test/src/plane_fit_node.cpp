@@ -9,14 +9,17 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
+#include <std_msgs/Float32MultiArray.h>
 #include <geometry_msgs/PointStamped.h>
 
+using std_msgs::Float32MultiArray;
+using std_msgs::MultiArrayDimension;
 using geometry_msgs::PointStampedConstPtr;
 using sensor_msgs::PointCloud2ConstPtr;
 using sensor_msgs::PointCloud2;
 
 PointCloud2ConstPtr point_cloud;
-ros::Publisher segment_pub, point_cloud_pub, inliers_pub;
+ros::Publisher segment_pub, point_cloud_pub, inliers_pub, model_plane_pub;
 
 void PointCloudCallback(PointCloud2ConstPtr msg)
 {
@@ -27,8 +30,6 @@ void ClickedPointCallback(PointStampedConstPtr msg)
 {
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud = boost::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
     pcl::fromROSMsg(*point_cloud, *cloud);
-    
-    std::cout << cloud->size() << std::endl;
 
     // segment out just the area around the clicked point
     double d = 0.25;
@@ -67,16 +68,25 @@ void ClickedPointCallback(PointStampedConstPtr msg)
     seg.setInputCloud(cloud);
     seg.segment(*inliers, *coeff);
 
-    std::cout << inliers->indices.size() << " inliers out of " << cloud->size() << std::endl;
-
     extract.setNegative(false);
     extract.setIndices(inliers);
     extract.filter(*cloud);
-    std::cout << cloud->size() << std::endl;
 
     PointCloud2 inliers_out;
     pcl::toROSMsg(*cloud, inliers_out);
     inliers_pub.publish(inliers_out);
+
+    // publish model coefficients
+    Float32MultiArray coeff_msg;
+    coeff_msg.layout.dim.push_back(MultiArrayDimension());
+    coeff_msg.layout.dim[0].size = 4;
+    coeff_msg.layout.dim[0].stride = 1;
+    coeff_msg.layout.dim[0].label = "coefficients";
+    for (float val : coeff->values)
+    {
+        coeff_msg.data.push_back(val);
+    }
+    model_plane_pub.publish(coeff_msg);
 }
 
 int main(int argc, char** argv)
@@ -88,6 +98,7 @@ int main(int argc, char** argv)
     segment_pub = nh.advertise<PointCloud2>("/segment_point_cloud", 1);
     point_cloud_pub = nh.advertise<PointCloud2>("/plane_point_cloud", 1);
     inliers_pub = nh.advertise<PointCloud2>("/inliers", 1);
+    model_plane_pub = nh.advertise<Float32MultiArray>("/model_plane_coeffs", 1);
     ros::spin();
     return 0;
 }

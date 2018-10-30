@@ -3,6 +3,7 @@
 import math
 import rospy
 from sensor_msgs.msg import Image
+from std_msgs.msg import Float32MultiArray
 from cv_bridge import CvBridge
 import cv2
 import numpy
@@ -30,9 +31,13 @@ class LaserCamCalib(object):
             self._object_points[i] = numpy.array([x, y, z])
 
         rospy.Subscriber('/usb_cam/image_raw', Image, self.image_cb)
+        rospy.Subscriber('/model_plane_coeffs', Float32MultiArray, self.coeffs_cb)
         #rospy.Subscriber('/calib_test/new_plane', 
         self._img_pub = rospy.Publisher('/calib_test/img', Image, queue_size=1)
         rospy.spin()
+
+    def coeffs_cb(self, msg):
+        rospy.loginfo(msg.data)
 
     def image_cb(self, msg):
         cv_image = self._bridge.imgmsg_to_cv2(msg, msg.encoding)
@@ -63,9 +68,9 @@ class LaserCamCalib(object):
             for index in range(len(corners)):
                 cv2.circle(cv_image, (corners[index, 0, 0], corners[index, 0, 1]), 3, (0, 0, 255), 1)
 
-            ret, R, t = cv2.solvePnP(self._object_points, corners, self._camera_matrix, (0, 0, 0, 0))
+            ret, r, t = cv2.solvePnP(self._object_points, corners, self._camera_matrix, (0, 0, 0, 0))
             axis = numpy.float32([[0, 0, 0], [0.15, 0, 0], [0, 0.15, 0], [0, 0, 0.15]])
-            img_points, jac = cv2.projectPoints(axis, R, t, self._camera_matrix, (0, 0, 0, 0))
+            img_points, _ = cv2.projectPoints(axis, r, t, self._camera_matrix, (0, 0, 0, 0))
 
             cv2.line(cv_image, tuple(corners[0].ravel()), (img_points[1, 0, 0], img_points[1, 0, 1]), (255, 0, 0), 5)
             cv2.line(cv_image, tuple(corners[0].ravel()), (img_points[2, 0, 0], img_points[2, 0, 1]), (0, 255, 0), 5)
