@@ -1,4 +1,6 @@
 calib_test
 /root/ws/devel/.private/calib_test/share/calib_test/cmake/calib_testConfig-version.cmake /root/ws/devel/share/calib_test/cmake/calib_testConfig-version.cmake
 /root/ws/devel/.private/calib_test/share/calib_test/cmake/calib_testConfig.cmake /root/ws/devel/share/calib_test/cmake/calib_testConfig.cmake
+/root/ws/devel/.private/calib_test/lib/libPlaneFitter.so /root/ws/devel/lib/libPlaneFitter.so
 /root/ws/devel/.private/calib_test/lib/pkgconfig/calib_test.pc /root/ws/devel/lib/pkgconfig/calib_test.pc
+/root/ws/devel/.private/calib_test/lib/calib_test/plane_fit_node /root/ws/devel/lib/calib_test/plane_fit_node

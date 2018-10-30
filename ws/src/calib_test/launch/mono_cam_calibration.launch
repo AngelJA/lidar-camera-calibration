@@ -16,4 +16,5 @@
   <arg name="qw" value="0.5" />
   <node name="laser_camera_tf" pkg="tf" type="static_transform_publisher" args="0 0 0 $(arg qx) $(arg qy) $(arg qz) $(arg qw) velodyne usb_cam 100" />
   <node name="test" pkg="calib_test" type="calib" output="screen" />
+  <node name="plane_fit" pkg="calib_test" type="plane_fit_node" output="screen" />
 </launch>
