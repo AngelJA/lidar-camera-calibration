@@ -11,15 +11,18 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <std_msgs/Float32MultiArray.h>
 #include <geometry_msgs/PointStamped.h>
+#include <visualization_msgs/Marker.h>
 
 using std_msgs::Float32MultiArray;
 using std_msgs::MultiArrayDimension;
+using geometry_msgs::Point;
 using geometry_msgs::PointStampedConstPtr;
 using sensor_msgs::PointCloud2ConstPtr;
 using sensor_msgs::PointCloud2;
+using visualization_msgs::Marker;
 
 PointCloud2ConstPtr point_cloud;
-ros::Publisher segment_pub, point_cloud_pub, inliers_pub, model_plane_pub;
+ros::Publisher segment_pub, point_cloud_pub, inliers_pub, model_plane_pub, arrow_pub;
 
 void PointCloudCallback(PointCloud2ConstPtr msg)
 {
@@ -64,7 +67,7 @@ void ClickedPointCallback(PointStampedConstPtr msg)
     seg.setOptimizeCoefficients(true);
     seg.setModelType(pcl::SACMODEL_PLANE);
     seg.setMethodType(pcl::SAC_RANSAC);
-    seg.setDistanceThreshold(0.01);
+    seg.setDistanceThreshold(0.03);
     seg.setInputCloud(cloud);
     seg.segment(*inliers, *coeff);
 
@@ -87,6 +90,29 @@ void ClickedPointCallback(PointStampedConstPtr msg)
         coeff_msg.data.push_back(val);
     }
     model_plane_pub.publish(coeff_msg);
+
+    // draw arrow at clicked point representing plane normal
+    //double length = std::sqrt(std::pow(coeff->values[0], 2) + std::pow(coeff->values[1], 2) + std::pow(coeff->values[2], 2));
+    Marker arrow;
+    arrow.header.frame_id = "/velodyne";
+    arrow.header.stamp = ros::Time();
+    arrow.type = visualization_msgs::Marker::ARROW;
+    arrow.action = visualization_msgs::Marker::ADD;
+    Point p;
+    p.x = msg->point.x;
+    p.y = msg->point.y;
+    p.z = msg->point.z;
+    arrow.points.push_back(p);
+    p.x -= coeff->values[0] / 3;
+    p.y -= coeff->values[1] / 3;
+    p.z -= coeff->values[2] / 3;
+    arrow.points.push_back(p);
+    arrow.scale.x = 0.03;
+    arrow.scale.y = 0.05;
+    arrow.scale.z = 0.05;
+    arrow.color.a = 1;
+    arrow.color.r = 1;
+    arrow_pub.publish(arrow);
 }
 
 int main(int argc, char** argv)
@@ -99,6 +125,7 @@ int main(int argc, char** argv)
     point_cloud_pub = nh.advertise<PointCloud2>("/plane_point_cloud", 1);
     inliers_pub = nh.advertise<PointCloud2>("/inliers", 1);
     model_plane_pub = nh.advertise<Float32MultiArray>("/model_plane_coeffs", 1);
+    arrow_pub = nh.advertise<Marker>("/model_plane_arrow", 1);
     ros::spin();
     return 0;
 }

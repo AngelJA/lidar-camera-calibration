@@ -2,11 +2,14 @@
 
 import math
 import rospy
-from sensor_msgs.msg import Image
+from std_msgs.msg import Empty
+from sensor_msgs.msg import Image, PointCloud2
+import sensor_msgs.point_cloud2 as pc2
 from std_msgs.msg import Float32MultiArray
 from cv_bridge import CvBridge
 import cv2
 import numpy
+from numpy.linalg import svd, inv
 
         # import readline # optional, will allow Up/Down/History in the console
         # import code
@@ -18,31 +21,154 @@ import numpy
 class LaserCamCalib(object):
     def __init__(self):
         self._bridge = CvBridge()
+        #TODO don't hardcode board dims and camera intrinsics
         self._camera_matrix = numpy.array([[617.436828613281, 0, 326.484985351562], [0, 617.313415527344, 235.550384521484], [0, 0, 1]])
         self._rows = 7
         self._cols = 10
-        self._object_points = numpy.empty((self._rows * self._cols, 3))
         self._square_size = 0.05
-
+        self._object_points = numpy.empty((self._rows * self._cols, 3))
         for i in range(self._rows * self._cols):
-            x = 0
-            y = int(i / self._rows) * self._square_size
-            z = (i % self._rows) * self._square_size
+            x = int(i / self._rows) * self._square_size
+            y = (i % self._rows) * self._square_size
+            z = 0
             self._object_points[i] = numpy.array([x, y, z])
+
+        self._theta_c = numpy.empty((3, 0))
+        self._alpha_c = numpy.empty((1, 0))
+        self._theta_l = numpy.empty((3, 0))
+        self._alpha_l = numpy.empty((1, 0))
+        self._lidar_pts = []
+
+        # self._theta_l = numpy.array([[-0.92168057, -0.78420335, -0.98073786, -0.90869403, -0.69884926],
+        #                              [ 0.09591368,  0.49713314, -0.16612960,  0.40580246, -0.63839966],
+        #                              [ 0.37590611,  0.37132695,  0.10273372, -0.09797698,  0.32257634]])
+        # self._alpha_l = numpy.array([[-1.50315225, -1.48898458, -0.63912606, -0.64896744, -0.61879224]])
+
+        # self._theta_c = numpy.array([[-0.15594683, -0.54106344,  0.09828406, -0.46073627,  0.64176706],
+        #                              [-0.41481030, -0.40576532, -0.05662344,  0.04061461, -0.03969631],
+        #                              [-0.89644465, -0.73661717, -0.99354619, -0.88660732, -0.76587156]])
+        # self._alpha_c = numpy.array([[-1.73991873, -1.72716511, -0.78603712, -0.79620280, -0.69432869]])
 
         rospy.Subscriber('/usb_cam/image_raw', Image, self.image_cb)
         rospy.Subscriber('/model_plane_coeffs', Float32MultiArray, self.coeffs_cb)
-        #rospy.Subscriber('/calib_test/new_plane', 
+        rospy.Subscriber('/calibrate', Empty, self.calibrate_cb)
+        rospy.Subscriber('/remove_last_sample', Empty, self.remove_sample_cb)
+        rospy.Subscriber('/inliers', PointCloud2, self.point_cloud_cb)
         self._img_pub = rospy.Publisher('/calib_test/img', Image, queue_size=1)
         rospy.spin()
 
+    def point_cloud_cb(self, msg):
+        self._lidar_pts.append(numpy.empty((4, msg.width)))
+        p = pc2.read_points(msg, field_names=('x', 'y', 'z'), skip_nans=True)
+        i = 0
+        for point in p:
+            self._lidar_pts[-1][0, i] = point[0]
+            self._lidar_pts[-1][1, i] = point[1]
+            self._lidar_pts[-1][2, i] = point[2]
+            self._lidar_pts[-1][3, i] = 1
+            i += 1
+        print('=== lidar scans: {:d}\n'.format(len(self._lidar_pts)))
+
     def coeffs_cb(self, msg):
-        rospy.loginfo(msg.data)
+        self._theta_l = numpy.append(self._theta_l, numpy.array([[-msg.data[0], -msg.data[1], -msg.data[2]]]).T, axis=1)
+        self._alpha_l = numpy.append(self._alpha_l, [[msg.data[3]]], axis=1)
+        self._theta_c = numpy.append(self._theta_c, self._last_theta_c, axis=1)
+        self._alpha_c = numpy.append(self._alpha_c, self._last_alpha_c, axis=1)
+
+        print('=== lidar ===')
+        print(self._theta_l)
+        print(self._alpha_l)
+        print('=== camera ===')
+        print(self._theta_c)
+        print(self._alpha_c)
+
+    def calibrate_cb(self, msg):
+        print('=== Calibration Stage I ===')
+        t_est = inv(numpy.dot(self._theta_c, self._theta_c.T))
+        t_est = numpy.dot(t_est, self._theta_c)
+        t_est = numpy.dot(t_est, (self._alpha_c - self._alpha_l).T)
+        U, S, V = svd(numpy.dot(self._theta_l, self._theta_c.T))
+        R = V * U.T
+
+        print(t_est)
+        print(R)
+
+        rms_dist = numpy.dot(t_est.T, self._theta_c)
+        rms_dist = abs(rms_dist - self._alpha_c)
+        rms_dist = (rms_dist - self._alpha_l) ** 2
+        rms_dist = numpy.sqrt(numpy.mean(rms_dist))
+        print('rms distance to planes: {:4f}'.format(rms_dist))
+
+        print('rms actual points to planes: {:4f}'.format(self.rms_dist_points_to_planes(R, t_est)))
+        f = lambda x: self.rms_dist_points_to_planes(self.q_to_R(x[:, 0:4]), x[:, 4:].T)
+        q = self.R_to_q(R)
+        print(q)
+        params = numpy.append(q, t_est.T, axis=1)
+        print('rms actual points to planes: {:4f}'.format(f(params)))
+        R = self.q_to_R(q)
+        print('rms actual points to planes: {:4f}'.format(self.rms_dist_points_to_planes(R, t_est)))
+        q = self.R_to_q(R)
+        params = numpy.append(q, t_est.T, axis=1)
+        print('rms actual points to planes: {:4f}'.format(f(params)))
+
+
+    def q_to_R(self, q):
+        q = q / numpy.sqrt(numpy.sum(numpy.dot(q, q.T)))
+        qw = q[0, 0]
+        qx = q[0, 1]
+        qy = q[0, 2]
+        qz = q[0, 3]
+        qw2 = qw**2
+        qx2 = qx**2
+        qy2 = qy**2
+        qz2 = qz**2
+
+        R = numpy.zeros((3, 3))
+        R[0, 0] = qx2 - qy2 - qz2 + qw2
+        R[0, 1] = 2 * (qx * qy - qz * qw)
+        R[0, 2] = 2 * (qx * qz + qy * qw)
+        R[1, 0] = 2 * (qx * qy + qz * qw)
+        R[1, 1] = -qx2 + qy2 - qz2 + qw2
+        R[1, 2] = 2 * (qy * qz - qx * qw)
+        R[2, 0] = 2 * (qx * qz - qy * qw)
+        R[2, 1] = 2 * (qy * qz + qx * qw)
+        R[2, 2] = -qx2 - qy2 + qz2 + qw2
+
+        return R
+
+    def R_to_q(self, R):
+        t = 1 + numpy.trace(R)
+        q = numpy.zeros((1, 4))
+        if t > 0:
+            s = 0.5 / numpy.sqrt(t)
+            q[0, 0] = 0.5 * numpy.sqrt(t)
+            q[0, 1] = (R[2, 1] - R[1, 2]) * s
+            q[0, 2] = (R[0, 2] - R[2, 0]) * s
+            q[0, 3] = (R[1, 0] - R[0, 1]) * s
+        else:
+            raise ValueError('Trace is < 0')
+        return q
+
+    def rms_dist_points_to_planes(self, R, t):
+        M = numpy.append(R, t, axis=1)
+        dist = numpy.empty((0))
+        for i in range(len(self._lidar_pts)):
+            theta = numpy.array([self._theta_c[:, i]])
+            alpha = self._alpha_c[0, i]
+            dist = numpy.append(dist, (numpy.dot(theta, numpy.dot(M, self._lidar_pts[i])) - alpha) ** 2)
+        return numpy.sqrt(numpy.mean(dist))
+
+    def remove_sample_cb(self, msg):
+        self._theta_l = numpy.delete(self._theta_l, -1, 1)
+        self._alpha_l = numpy.delete(self._alpha_l, -1, 1)
+        self._theta_c = numpy.delete(self._theta_c, -1, 1)
+        self._alpha_c = numpy.delete(self._alpha_c, -1, 1)
+        self._lidar_pts.pop()
+        print('=== last sample removed ===')
 
     def image_cb(self, msg):
         cv_image = self._bridge.imgmsg_to_cv2(msg, msg.encoding)
         mono = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
-        #TODO don't hardcode board dims
         (ok, corners) = cv2.findChessboardCorners(mono, (self._rows, self._cols), 
             flags = cv2.CALIB_CB_ADAPTIVE_THRESH | cv2.CALIB_CB_NORMALIZE_IMAGE | cv2.CALIB_CB_FAST_CHECK)
 
@@ -69,12 +195,16 @@ class LaserCamCalib(object):
                 cv2.circle(cv_image, (corners[index, 0, 0], corners[index, 0, 1]), 3, (0, 0, 255), 1)
 
             ret, r, t = cv2.solvePnP(self._object_points, corners, self._camera_matrix, (0, 0, 0, 0))
-            axis = numpy.float32([[0, 0, 0], [0.15, 0, 0], [0, 0.15, 0], [0, 0, 0.15]])
+            R, _ = cv2.Rodrigues(r)
+            self._last_theta_c = numpy.array([R[:, 2]]).T
+            self._last_alpha_c = numpy.dot(t.T, self._last_theta_c)
+
+            axis = numpy.float32([[0.15, 0, 0], [0, 0.15, 0], [0, 0, 0.15]])
             img_points, _ = cv2.projectPoints(axis, r, t, self._camera_matrix, (0, 0, 0, 0))
 
-            cv2.line(cv_image, tuple(corners[0].ravel()), (img_points[1, 0, 0], img_points[1, 0, 1]), (255, 0, 0), 5)
-            cv2.line(cv_image, tuple(corners[0].ravel()), (img_points[2, 0, 0], img_points[2, 0, 1]), (0, 255, 0), 5)
-            cv2.line(cv_image, tuple(corners[0].ravel()), (img_points[3, 0, 0], img_points[3, 0, 1]), (0, 0, 255), 5)
+            cv2.line(cv_image, tuple(corners[0].ravel()), (img_points[0, 0, 0], img_points[0, 0, 1]), (0, 0, 255), 5)
+            cv2.line(cv_image, tuple(corners[0].ravel()), (img_points[1, 0, 0], img_points[1, 0, 1]), (0, 255, 0), 5)
+            cv2.line(cv_image, tuple(corners[0].ravel()), (img_points[2, 0, 0], img_points[2, 0, 1]), (255, 0, 0), 5)
 
 
         self._img_pub.publish(self._bridge.cv2_to_imgmsg(cv_image))
