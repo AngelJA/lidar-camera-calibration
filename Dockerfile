@@ -2,6 +2,7 @@ FROM ros:kinetic-perception-xenial
 
 RUN apt update && apt install -y \
     libpcap-dev \
+    python-scipy \
     ros-kinetic-rqt \
     ros-kinetic-rqt-common-plugins \
     ros-kinetic-diagnostic-updater \

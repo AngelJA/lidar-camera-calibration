@@ -1,4 +1,5 @@
 <launch>
+  <!-- <param name="use_sim_time" value="true" /> -->
   <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
     <param name="video_device" value="/dev/video3" />
     <param name="image_width" value="640" />
@@ -8,13 +9,19 @@
     <param name="io_method" value="mmap"/>
     <param name="camera_info_url" value="file://$(find calib_test)/cfg/head_camera.yaml" />
   </node>
-  <include file="$(find velodyne_pointcloud)/launch/VLP-32C_points.launch" />
+  <include file="$(find velodyne_pointcloud)/launch/VLP-32C_points.launch">
+    <arg name="rpm" value="1200" />
+  </include>
   <node name="visualization" pkg="rviz" type="rviz" args="-d $(find calib_test)/cfg/config.rviz" />
-  <arg name="qx" value="-0.5" />
-  <arg name="qy" value="0.5" />
-  <arg name="qz" value="-0.5" />
-  <arg name="qw" value="0.5" />
-  <node name="laser_camera_tf" pkg="tf" type="static_transform_publisher" args="0 0 0 $(arg qx) $(arg qy) $(arg qz) $(arg qw) velodyne usb_cam 100" />
+  <arg name="x" value="0.05992333" />
+  <arg name="y" value="0.05850474" />
+  <arg name="z" value="0.03262022" />
+  <arg name="qw" value="1.13570665" />
+  <arg name="qx" value="1.12591243" />
+  <arg name="qy" value="-1.06239509" />
+  <arg name="qz" value="1.05916699" />
+  <node name="laser_camera_tf" pkg="tf" type="static_transform_publisher" args="$(arg x) $(arg y) $(arg z) $(arg qx) $(arg qy) $(arg qz) $(arg qw) usb_cam velodyne 100" />
   <node name="test" pkg="calib_test" type="calib" output="screen" />
   <node name="plane_fit" pkg="calib_test" type="plane_fit_node" output="screen" />
+  <node name="gui" pkg="rqt_gui" type="rqt_gui" />
 </launch>

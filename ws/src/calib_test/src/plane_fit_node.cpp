@@ -71,6 +71,13 @@ void ClickedPointCallback(PointStampedConstPtr msg)
     seg.setInputCloud(cloud);
     seg.segment(*inliers, *coeff);
 
+    // make sure plane normal points in negative x
+    if (coeff->values[0] > 0) {
+        coeff->values[0] *= -1;
+        coeff->values[1] *= -1;
+        coeff->values[2] *= -1;
+    }
+
     extract.setNegative(false);
     extract.setIndices(inliers);
     extract.filter(*cloud);
@@ -103,9 +110,9 @@ void ClickedPointCallback(PointStampedConstPtr msg)
     p.y = msg->point.y;
     p.z = msg->point.z;
     arrow.points.push_back(p);
-    p.x -= coeff->values[0] / 3;
-    p.y -= coeff->values[1] / 3;
-    p.z -= coeff->values[2] / 3;
+    p.x += coeff->values[0] / 3;
+    p.y += coeff->values[1] / 3;
+    p.z += coeff->values[2] / 3;
     arrow.points.push_back(p);
     arrow.scale.x = 0.03;
     arrow.scale.y = 0.05;
