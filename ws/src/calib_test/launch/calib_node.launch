@@ -1,0 +1,6 @@
+<launch>
+    <node name="calibration_node" pkg="calib_test" type="calib" output="screen">
+        <rosparam command="load" file="$(find calib_test)/config/calib_node_config.yaml" />
+        <remap from="image" to="camera/image_raw" />
+    </node>
+</launch>
