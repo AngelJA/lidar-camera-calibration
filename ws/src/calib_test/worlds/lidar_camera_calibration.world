@@ -1,20 +1,24 @@
 <sdf version='1.6'>
   <world name='default'>
-    <include>
-      <uri>model://sun</uri>
-    </include>
-    
-    <light name='directional_light' type='directional'>
-      <pose>-5 0 1 0 -1.5708 0</pose>
-      <attenuation>
-        <constant>0.5</constant>
-        <linear>0.01</linear>
-      </attenuation>
-    </light>
+    <scene>
+      <shadows>false</shadows>
+    </scene>
 
-    <include>
-      <uri>model://ground_plane</uri>
-    </include>
+    <light type="directional" name="x_light">
+      <direction>1 0 0</direction>
+    </light>
+    <light type="directional" name="y_light">
+      <direction>0 1 0</direction>
+    </light>
+    <light type="directional" name="-y_light">
+      <direction>0 -1 0</direction>
+    </light>
+    <light type="directional" name="z_light">
+      <direction>0 0 1</direction>
+    </light>
+    <light type="directional" name="-z_light">
+      <direction>0 0 -1</direction>
+    </light>
 
     <include>
       <uri>model://lidar</uri>
