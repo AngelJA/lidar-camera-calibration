@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+    <model name="calibration_target">
+        <pose>0 0 0.75</pose>
+        <static>true</static>
+        <link name="link">
+            <visual name="visual">
+                <geometry>
+                    <mesh>
+                        <uri>model://calibration_target/meshes/calibration_target.dae</uri>
+                    </mesh>
+                </geometry>
+            </visual>
+            <collision name="collision">
+                <geometry>
+                    <mesh>
+                        <uri>model://calibration_target/meshes/calibration_target.dae</uri>
+                    </mesh>
+                </geometry>
+            </collision>
+        </link>
+    </model>
+</sdf>
