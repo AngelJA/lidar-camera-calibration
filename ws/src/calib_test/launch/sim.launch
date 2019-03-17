@@ -1,0 +1,12 @@
+<launch>
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(find calib_test)/worlds/lidar_camera_calibration.world" />
+    </include>
+
+    <node name="test" pkg="calib_test" type="calib" output="screen">
+        <remap from="usb_cam/image_raw" to="camera/image_raw" />
+    </node>
+    <node name="plane_fit" pkg="calib_test" type="plane_fit_node" output="screen" />
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find calib_test)/cfg/config.rviz" />
+</launch>

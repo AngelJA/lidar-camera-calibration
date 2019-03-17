@@ -1,0 +1,35 @@
+<sdf version='1.6'>
+  <world name='default'>
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    
+    <light name='directional_light' type='directional'>
+      <pose>-5 0 1 0 -1.5708 0</pose>
+      <attenuation>
+        <constant>0.5</constant>
+        <linear>0.01</linear>
+      </attenuation>
+    </light>
+
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <include>
+      <uri>model://lidar</uri>
+      <pose>0 0.25 0.5 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://camera</uri>
+      <pose>0 -0.25 0.7 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://calibration_target</uri>
+      <pose>1.5 0 0.75 0 0 1.5708</pose>
+    </include>
+
+  </world>
+</sdf>
