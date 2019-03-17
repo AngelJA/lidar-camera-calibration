@@ -24,9 +24,9 @@ class LaserCamCalib(object):
         self._bridge = CvBridge()
         #TODO don't hardcode board dims and camera intrinsics
         self._camera_matrix = numpy.array([[617.436828613281, 0, 326.484985351562], [0, 617.313415527344, 235.550384521484], [0, 0, 1]])
-        self._rows = 7
-        self._cols = 10
-        self._square_size = 0.05
+        self._rows = rospy.get_param("~checkerboard/rows")
+        self._cols = rospy.get_param("~checkerboard/columns")
+        self._square_size = rospy.get_param("~checkerboard/square_size")
         self._object_points = numpy.empty((self._rows * self._cols, 3))
         for i in range(self._rows * self._cols):
             x = int(i / self._rows) * self._square_size
@@ -50,12 +50,12 @@ class LaserCamCalib(object):
         #                              [-0.89644465, -0.73661717, -0.99354619, -0.88660732, -0.76587156]])
         # self._alpha_c = numpy.array([[-1.73991873, -1.72716511, -0.78603712, -0.79620280, -0.69432869]])
 
-        rospy.Subscriber('/usb_cam/image_raw', Image, self.image_cb)
-        rospy.Subscriber('/model_plane_coeffs', Float32MultiArray, self.coeffs_cb)
-        rospy.Subscriber('/calibrate', Empty, self.calibrate_cb)
-        rospy.Subscriber('/remove_last_sample', Empty, self.remove_sample_cb)
-        rospy.Subscriber('/inliers', PointCloud2, self.point_cloud_cb)
-        self._img_pub = rospy.Publisher('/calib_test/img', Image, queue_size=1)
+        rospy.Subscriber('image', Image, self.image_cb, queue_size=1)
+        rospy.Subscriber('model_plane_coeffs', Float32MultiArray, self.coeffs_cb)
+        rospy.Subscriber('calibrate', Empty, self.calibrate_cb)
+        rospy.Subscriber('remove_last_sample', Empty, self.remove_sample_cb)
+        rospy.Subscriber('inliers', PointCloud2, self.point_cloud_cb)
+        self._img_pub = rospy.Publisher('image_processed', Image, queue_size=1)
         rospy.spin()
 
     def point_cloud_cb(self, msg):

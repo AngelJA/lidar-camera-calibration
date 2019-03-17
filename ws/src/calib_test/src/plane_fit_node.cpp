@@ -101,7 +101,7 @@ void ClickedPointCallback(PointStampedConstPtr msg)
     // draw arrow at clicked point representing plane normal
     //double length = std::sqrt(std::pow(coeff->values[0], 2) + std::pow(coeff->values[1], 2) + std::pow(coeff->values[2], 2));
     Marker arrow;
-    arrow.header.frame_id = "/velodyne";
+    arrow.header.frame_id = "lidar_link";
     arrow.header.stamp = ros::Time();
     arrow.type = visualization_msgs::Marker::ARROW;
     arrow.action = visualization_msgs::Marker::ADD;
@@ -127,12 +127,12 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "plane_fit_node");
     ros::NodeHandle nh;
     ros::Subscriber clicked_point_sub = nh.subscribe("/clicked_point", 1, ClickedPointCallback);
-    ros::Subscriber point_cloud_sub = nh.subscribe("/velodyne_points", 1, PointCloudCallback);
-    segment_pub = nh.advertise<PointCloud2>("/segment_point_cloud", 1);
-    point_cloud_pub = nh.advertise<PointCloud2>("/plane_point_cloud", 1);
-    inliers_pub = nh.advertise<PointCloud2>("/inliers", 1);
-    model_plane_pub = nh.advertise<Float32MultiArray>("/model_plane_coeffs", 1);
-    arrow_pub = nh.advertise<Marker>("/model_plane_arrow", 1);
+    ros::Subscriber point_cloud_sub = nh.subscribe("lidar_points", 1, PointCloudCallback);
+    segment_pub = nh.advertise<PointCloud2>("segment_point_cloud", 1);
+    point_cloud_pub = nh.advertise<PointCloud2>("plane_point_cloud", 1);
+    inliers_pub = nh.advertise<PointCloud2>("inliers", 1);
+    model_plane_pub = nh.advertise<Float32MultiArray>("model_plane_coeffs", 1);
+    arrow_pub = nh.advertise<Marker>("model_plane_arrow", 1);
     ros::spin();
     return 0;
 }
