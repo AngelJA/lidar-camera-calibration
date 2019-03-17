@@ -1,0 +1,4 @@
+checkerboard:
+  rows: 9
+  columns: 9
+  square_size: 0.1
