@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+    <model name="lidar">
+        <pose>0 0 0.5</pose>
+        <static>true</static>
+        <link name="link">
+            <visual name="visual">
+                <geometry>
+                    <mesh>
+                        <uri>model://lidar/meshes/lidar.dae</uri>
+                    </mesh>
+                </geometry>
+            </visual>
+
+            <sensor type="ray" name="gpu-vlp-16">
+                <visualize>false</visualize>
+                <update_rate>10</update_rate>
+                <ray>
+                    <scan>
+                        <horizontal>
+                            <samples>1024</samples>
+                            <resolution>1</resolution>
+                            <min_angle>0</min_angle>
+                            <max_angle>6.2832</max_angle>
+                        </horizontal>
+                        <vertical>
+                            <samples>16</samples>
+                            <min_angle>-0.2618</min_angle>
+                            <max_angle>0.2618</max_angle>
+                        </vertical>
+                    </scan>
+                    <range>
+                        <min>0.1</min>
+                        <max>100</max>
+                        <resolution>0.03</resolution>
+                    </range>
+                    <noise>
+                        <type>gaussian</type>
+                        <mean>0.0</mean>
+                        <stddev>0.0</stddev>
+                    </noise>
+                </ray>
+
+                <plugin name="gazebo_ros_laser_controller" filename="libgazebo_ros_velodyne_laser.so">
+                    <topicName>lidar_points</topicName>
+                    <frameName>lidar_link</frameName>
+                    <min_range>0.1</min_range>
+                    <max_range>100</max_range>
+                    <gaussianNoise>0</gaussianNoise>
+                </plugin>
+            </sensor>
+        </link>
+    </model>
+</sdf>
