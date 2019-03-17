@@ -1,26 +1,30 @@
-FROM ros:kinetic-perception-xenial
+FROM ros:melodic
 
 RUN apt update && apt install -y \
+    dbus-x11 \
     libpcap-dev \
     python-scipy \
-    ros-kinetic-rqt \
-    ros-kinetic-rqt-common-plugins \
-    ros-kinetic-diagnostic-updater \
-    ros-kinetic-rviz \
+    ros-melodic-diagnostic-updater \
+    ros-melodic-gazebo-ros-pkgs \
+    ros-melodic-pcl-conversions \
+    ros-melodic-pcl-ros \
+    ros-melodic-rqt \
+    ros-melodic-rqt-common-plugins \
+    ros-melodic-rviz \
+    ros-melodic-usb-cam \
+    ros-melodic-velodyne-driver \
+    ros-melodic-velodyne-simulator \
     software-properties-common \
-    terminator \
-    wget
+    terminator
 
-# install catkin_tools
-RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu `lsb_release -sc` main" > /etc/apt/sources.list.d/ros-latest.list' && \
-    wget http://packages.ros.org/ros.key -O - | apt-key add -
+RUN echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc
 
-RUN apt update && apt install -y \
-    python-catkin-tools
+# nvidia-container-runtime
+ENV NVIDIA_VISIBLE_DEVICES \
+    ${NVIDIA_VISIBLE_DEVICES:-all}
+ENV NVIDIA_DRIVER_CAPABILITIES \
+    ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics
 
-LABEL com.nvidia.volumes.needed="nvidia_driver"
-ENV PATH /usr/local/nvidia/bin:${PATH}
-ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64:${LD_LIBRARY_PATH}
-RUN echo "source /opt/ros/kinetic/setup.bash" >> ~/.bashrc
+COPY ./models /root/.gazebo/models
 
 CMD terminator
