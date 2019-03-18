@@ -10,12 +10,15 @@ find_package(catkin REQUIRED
     roscpp
     sensor_msgs)
 
+find_package(OpenCV 3.2 REQUIRED)
+
 catkin_package()
 
 include_directories(
     include
     ${catkin_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
 )
 
-add_executable(plane_fit_node src/plane_fit_node.cpp)
-target_link_libraries(plane_fit_node ${catkin_LIBRARIES})
+add_executable(lidar_camera_calibration_node src/lidar_camera_calibration.cpp)
+target_link_libraries(lidar_camera_calibration_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
