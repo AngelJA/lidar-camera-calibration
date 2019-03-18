@@ -1,11 +1,9 @@
 <launch>
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
-        <arg name="world_name" value="$(find calib_test)/worlds/lidar_camera_calibration.world" />
+        <arg name="world_name" value="$(find lidar_camera_calibration)/worlds/lidar_camera_calibration.world" />
     </include>
 
-    <include file="$(find calib_test)/launch/calib_node.launch" />
+    <include file="$(find lidar_camera_calibration)/launch/calib_node.launch" />
 
-    <node name="plane_fit" pkg="calib_test" type="plane_fit_node" output="screen" />
-
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find calib_test)/config/config.rviz" />
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find lidar_camera_calibration)/config/config.rviz" />
 </launch>

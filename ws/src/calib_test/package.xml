@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>calib_test</name>
+  <name>lidar_camera_calibration</name>
   <version>0.0.0</version>
-  <description>The calib_test package</description>
+  <description>The lidar_camera_calibration package</description>
 
   <maintainer email="angel.j.avila@gmail.com">angel</maintainer>
   <license>BSD-2</license>

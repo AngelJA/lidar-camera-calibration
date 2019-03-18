@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(calib_test)
+project(lidar_camera_calibration)
 
 add_compile_options(-std=c++11)
 
