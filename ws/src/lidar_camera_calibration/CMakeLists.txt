@@ -20,5 +20,5 @@ include_directories(
     ${OpenCV_INCLUDE_DIRS}
 )
 
-add_executable(lidar_camera_calibration_node src/lidar_camera_calibration.cpp)
-target_link_libraries(lidar_camera_calibration_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+add_executable(run_calibration src/lidar_camera_calibration.cpp)
+target_link_libraries(run_calibration ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
