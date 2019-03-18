@@ -3,7 +3,7 @@
         <arg name="world_name" value="$(find lidar_camera_calibration)/worlds/lidar_camera_calibration.world" />
     </include>
 
-    <include file="$(find lidar_camera_calibration)/launch/calib_node.launch" />
+    <include file="$(find lidar_camera_calibration)/launch/calibration_node.launch" />
 
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find lidar_camera_calibration)/config/config.rviz" />
 </launch>

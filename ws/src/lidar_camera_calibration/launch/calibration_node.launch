@@ -1,6 +1,6 @@
 <launch>
     <node name="calibration_node" pkg="lidar_camera_calibration" type="run_calibration" output="screen">
         <rosparam command="load" file="$(find lidar_camera_calibration)/config/calibration_config.yaml" />
-        <remap from="image" to="camera/image_raw" />
+        <remap from="~image" to="/camera/image_raw" />
     </node>
 </launch>

@@ -4,11 +4,13 @@ project(lidar_camera_calibration)
 add_compile_options(-std=c++11)
 
 find_package(catkin REQUIRED
+    cv_bridge
     geometry_msgs
     pcl_conversions
     pcl_ros
     roscpp
-    sensor_msgs)
+    sensor_msgs
+    visualization_msgs)
 
 find_package(OpenCV 3.2 REQUIRED)
 
