@@ -8,4 +8,4 @@ services:
         - DISPLAY
       volumes:
         - /tmp/.X11-unix:/tmp/.X11-unix
-        - ./ws:/root/ws
+        - ./ros:/root/ros
