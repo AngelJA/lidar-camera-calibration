@@ -7,6 +7,7 @@
   <maintainer email="angel.j.avila@gmail.com">angel</maintainer>
   <license>BSD-2</license>
   <buildtool_depend>catkin</buildtool_depend>
+  <depend>armadillo</depend>
   <depend>cv_bridge</depend>
   <depend>geometry_msgs</depend>
   <depend>libopencv-dev</depend>

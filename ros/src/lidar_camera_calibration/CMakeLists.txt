@@ -14,6 +14,7 @@ find_package(catkin REQUIRED
     visualization_msgs)
 
 find_package(OpenCV 3.2 REQUIRED)
+find_package(Armadillo REQUIRED)
 
 catkin_package()
 
