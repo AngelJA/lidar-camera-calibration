@@ -31,6 +31,9 @@ using sensor_msgs::ImageConstPtr;
 using sensor_msgs::PointCloud2;
 using sensor_msgs::PointCloud2ConstPtr;
 
+#include <sensor_msgs/CameraInfo.h>
+using sensor_msgs::CameraInfoConstPtr;
+
 #include <visualization_msgs/Marker.h>
 using visualization_msgs::Marker;
 
@@ -42,34 +45,39 @@ public:
     // callbacks
     void ClickedPointCallback(PointStampedConstPtr msg);
     void ImageCallback(ImageConstPtr msg);
+    void CameraInfoCallback(CameraInfoConstPtr msg);
     void PointCloudCallback(PointCloud2ConstPtr msg);
     void CalibrateCallback(EmptyConstPtr msg);
 
 private:
     // lidar processing
-    pcl::PointCloud<pcl::PointXYZ>::Ptr FilterPointCloud(Point point);
-    void PerformPlaneFit(pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr FilterLastPointCloud(Point point);
+    cv::Vec<double, 4> PerformPlaneFit(pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud);
     void PublishPlaneMarker(Point point);
+
+    PointCloud2ConstPtr last_point_cloud;
     pcl::ModelCoefficients::Ptr plane_model_coefficients;
+    std::vector<cv::Vec<double, 4>> lidar_plane_models;
 
     // camera processing
+    boost::shared_ptr<std::vector<cv::Point2f>> DetectCorners(ImageConstPtr msg);
+    cv::Vec<double, 4> SolveCameraPlaneModel();
+    void PublishProcessedImage(ImageConstPtr msg);
+
+    cv::Mat_<double> checkerboard_points;
+    cv::Mat_<double> camera_matrix;
+    std::vector<cv::Vec<double, 4>> camera_plane_models;
+    boost::shared_ptr<std::vector<cv::Point2f>> last_camera_corners;
+
+    // checkerboard params
     int checkerboard_rows;
     int checkerboard_columns;
     double checkerboard_square_size;
-    cv::Mat_<double> checkerboard_points;
-
-    // data
-    PointCloud2ConstPtr last_point_cloud;
-    ImageConstPtr image;
-
-    std::vector<cv::Vec<double, 3>> theta_lidar;
-    std::vector<double> alpha_lidar;
-    std::vector<cv::Vec<double, 3>> theta_camera;
-    std::vector<double> alpha_camera;
 
     // ros stuff
     ros::NodeHandle nh;
     std::vector<ros::Subscriber> subscribers;
+    boost::shared_ptr<ros::Subscriber> camera_info_sub;
     ros::Publisher marker_publisher;
     ros::Publisher processed_image_publisher;
     ros::Publisher pc_test_pub;
