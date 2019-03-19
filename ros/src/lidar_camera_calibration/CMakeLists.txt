@@ -10,6 +10,7 @@ find_package(catkin REQUIRED
     pcl_ros
     roscpp
     sensor_msgs
+    std_msgs
     visualization_msgs)
 
 find_package(OpenCV 3.2 REQUIRED)

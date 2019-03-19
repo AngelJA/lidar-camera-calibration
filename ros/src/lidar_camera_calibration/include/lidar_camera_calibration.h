@@ -16,6 +16,9 @@
 #include <pcl/segmentation/sac_segmentation.h>
 
 // messages
+#include <std_msgs/Empty.h>
+using std_msgs::EmptyConstPtr;
+
 #include <geometry_msgs/PointStamped.h>
 using geometry_msgs::Point;
 using geometry_msgs::PointStampedConstPtr;
@@ -40,6 +43,7 @@ public:
     void ClickedPointCallback(PointStampedConstPtr msg);
     void ImageCallback(ImageConstPtr msg);
     void PointCloudCallback(PointCloud2ConstPtr msg);
+    void CalibrateCallback(EmptyConstPtr msg);
 
 private:
     // lidar processing

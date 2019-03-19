@@ -7,6 +7,7 @@ LidarCameraCalibration::LidarCameraCalibration() : nh("~")
     this->subscribers.push_back(this->nh.subscribe("/clicked_point", 1, &LidarCameraCalibration::ClickedPointCallback, this));
     this->subscribers.push_back(this->nh.subscribe("image", 1, &LidarCameraCalibration::ImageCallback, this));
     this->subscribers.push_back(this->nh.subscribe("lidar_points", 1, &LidarCameraCalibration::PointCloudCallback, this));
+    this->subscribers.push_back(this->nh.subscribe("calibrate", 1, &LidarCameraCalibration::CalibrateCallback, this));
     
     this->marker_publisher = this->nh.advertise<Marker>("markers", 1);
     this->processed_image_publisher = this->nh.advertise<Image>("processed_image", 1);
@@ -102,6 +103,11 @@ void LidarCameraCalibration::ImageCallback(ImageConstPtr msg)
 void LidarCameraCalibration::PointCloudCallback(PointCloud2ConstPtr msg)
 {
     this->last_point_cloud = msg;
+}
+
+void LidarCameraCalibration::CalibrateCallback(EmptyConstPtr msg)
+{
+
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr LidarCameraCalibration::FilterPointCloud(Point point)
