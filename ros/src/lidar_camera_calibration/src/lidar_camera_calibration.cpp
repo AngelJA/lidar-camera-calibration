@@ -1,5 +1,6 @@
 #include <lidar_camera_calibration.h>
 
+#include <optim/optim.hpp>
 #include <iostream>
 
 LidarCameraCalibration::LidarCameraCalibration() : nh("~")
@@ -86,9 +87,16 @@ void LidarCameraCalibration::PointCloudCallback(PointCloud2ConstPtr msg)
     this->last_point_cloud = msg;
 }
 
+    double f(const arma::vec& vals_inp, arma::vec* grad_out, void* opt_data)
+    {
+        return 0;
+    };
 void LidarCameraCalibration::CalibrateCallback(EmptyConstPtr msg)
 {
-
+    arma::vec v({0, 0, 0, 0, 0, 0, 1});
+    optim::algo_settings_t settings;
+    settings.verbose_print_level = 2;
+    optim::nm(v, f, 0, settings);
 }
 
 boost::shared_ptr<std::vector<cv::Point2f>> LidarCameraCalibration::DetectCorners(ImageConstPtr msg)
