@@ -2,6 +2,8 @@
 
 #include <ros/ros.h>
 
+#include <optim/optim.hpp>
+
 // opencv related
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/calib3d.hpp>
@@ -50,23 +52,37 @@ public:
     void CalibrateCallback(EmptyConstPtr msg);
 
 private:
+    struct PlaneFitResults
+    {
+        PlaneFitResults() : coefficients(new pcl::ModelCoefficients), inliers(new pcl::PointIndices) {}
+        pcl::ModelCoefficients::Ptr coefficients;
+        pcl::PointIndices::Ptr inliers;
+    };
+
+    // general / math
+    arma::vec R2q(arma::mat &R);
+    arma::mat q2R(arma::vec q);
+    double RMSDistanceLidarPointsToCameraPlanes(arma::mat &R, arma::vec &t);
+    double FunctionToMinimize(const arma::vec& vals_inp, arma::vec* grad_out, void* opt_data);
+
     // lidar processing
     pcl::PointCloud<pcl::PointXYZ>::Ptr FilterLastPointCloud(Point point);
-    cv::Vec<double, 4> PerformPlaneFit(pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud);
+    PlaneFitResults PerformPlaneFit(pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud);
+    void StoreLidarInliers(pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud, pcl::PointIndices::Ptr indices);
     void PublishPlaneMarker(Point point);
 
     PointCloud2ConstPtr last_point_cloud;
-    pcl::ModelCoefficients::Ptr plane_model_coefficients;
-    std::vector<cv::Vec<double, 4>> lidar_plane_models;
+    std::vector<arma::mat> lidar_inliers;
+    std::vector<std::array<double, 4>> lidar_plane_models;
 
     // camera processing
     boost::shared_ptr<std::vector<cv::Point2f>> DetectCorners(ImageConstPtr msg);
-    cv::Vec<double, 4> SolveCameraPlaneModel();
+    std::array<double, 4> SolveCameraPlaneModel();
     void PublishProcessedImage(ImageConstPtr msg);
 
     cv::Mat_<double> checkerboard_points;
     cv::Mat_<double> camera_matrix;
-    std::vector<cv::Vec<double, 4>> camera_plane_models;
+    std::vector<std::array<double, 4>> camera_plane_models;
     boost::shared_ptr<std::vector<cv::Point2f>> last_camera_corners;
 
     // checkerboard params

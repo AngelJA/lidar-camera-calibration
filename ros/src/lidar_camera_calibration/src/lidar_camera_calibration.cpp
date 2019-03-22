@@ -1,6 +1,5 @@
 #include <lidar_camera_calibration.h>
 
-#include <optim/optim.hpp>
 #include <iostream>
 
 LidarCameraCalibration::LidarCameraCalibration() : nh("~")
@@ -35,10 +34,18 @@ void LidarCameraCalibration::ClickedPointCallback(PointStampedConstPtr msg)
     if (this->last_camera_corners->size())
     {
         pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_point_cloud = this->FilterLastPointCloud(msg->point);
-        this->lidar_plane_models.push_back(this->PerformPlaneFit(filtered_point_cloud));
+        PlaneFitResults result = this->PerformPlaneFit(filtered_point_cloud);
+
+        this->StoreLidarInliers(filtered_point_cloud, result.inliers);
+        this->lidar_plane_models.push_back(std::array<double, 4>{{
+            result.coefficients->values[0],
+            result.coefficients->values[1],
+            result.coefficients->values[2],
+            result.coefficients->values[3]
+        }});
         this->camera_plane_models.push_back(this->SolveCameraPlaneModel());
 
-        std::vector<std::vector<cv::Vec<double, 4>>> models;
+        std::vector<std::vector<std::array<double, 4>>> models;
         models.push_back(this->lidar_plane_models);
         models.push_back(this->camera_plane_models);
 
@@ -87,16 +94,72 @@ void LidarCameraCalibration::PointCloudCallback(PointCloud2ConstPtr msg)
     this->last_point_cloud = msg;
 }
 
-    double f(const arma::vec& vals_inp, arma::vec* grad_out, void* opt_data)
-    {
-        return 0;
-    };
+double LidarCameraCalibration::FunctionToMinimize(const arma::vec& vals, arma::vec* grad_out, void* opt_data)
+{
+    arma::vec t({vals[0], vals[1], vals[2]});
+    arma::mat R = this->q2R(arma::vec({vals[3], vals[4], vals[5], vals[6]}));
+
+    return RMSDistanceLidarPointsToCameraPlanes(R, t);
+};
+
 void LidarCameraCalibration::CalibrateCallback(EmptyConstPtr msg)
 {
-    arma::vec v({0, 0, 0, 0, 0, 0, 1});
+    // v = [tx, ty, tz, qw, qx, qy, qz]
+    arma::vec v({0, 0, 0, 1, 0, 0, 0});
     optim::algo_settings_t settings;
     settings.verbose_print_level = 2;
-    optim::nm(v, f, 0, settings);
+    using std::placeholders::_1;
+    using std::placeholders::_2;
+    using std::placeholders::_3;
+    optim::nm(v, std::bind(&LidarCameraCalibration::FunctionToMinimize, this, _1, _2, _3), 0, settings);
+}
+
+arma::vec LidarCameraCalibration::R2q(arma::mat &R)
+{
+    arma::vec q(4, arma::fill::zeros);
+    double t = 1 + arma::trace(R);
+
+    if (t <= 0)
+    {
+        ROS_INFO("Trace is <= 0");
+    }
+    else
+    {
+        double s = 0.5 / cv::sqrt(t);
+        q(0) = 0.5 * cv::sqrt(t);
+        q(1) = (R(2, 1) - R(1, 2)) * s;
+        q(2) = (R(0, 2) - R(2, 0)) * s;
+        q(3) = (R(1, 0) - R(0, 1)) * s;
+    }
+
+    return q;
+}
+
+arma::mat LidarCameraCalibration::q2R(arma::vec q)
+{
+    arma::mat R(3, 3, arma::fill::zeros);
+    arma::vec q_norm = q / arma::norm(q);
+    
+    double qw = q_norm(0);
+    double qx = q_norm(1);
+    double qy = q_norm(2);
+    double qz = q_norm(3);
+    double qw2 = qw * qw;
+    double qx2 = qx * qx;
+    double qy2 = qy * qy;
+    double qz2 = qz * qz;
+
+    R(0, 0) = qx2 - qy2 - qz2 + qw2;
+    R(0, 1) = 2 * (qx * qy - qz * qw);
+    R(0, 2) = 2 * (qx * qz + qy * qw);
+    R(1, 0) = 2 * (qx * qy + qz * qw);
+    R(1, 1) = -qx2 + qy2 - qz2 + qw2;
+    R(1, 2) = 2 * (qy * qz - qx * qw);
+    R(2, 0) = 2 * (qx * qz - qy * qw);
+    R(2, 1) = 2 * (qy * qz + qx * qw);
+    R(2, 2) = -qx2 - qy2 + qz2 + qw2;
+    
+    return R;
 }
 
 boost::shared_ptr<std::vector<cv::Point2f>> LidarCameraCalibration::DetectCorners(ImageConstPtr msg)
@@ -145,7 +208,7 @@ boost::shared_ptr<std::vector<cv::Point2f>> LidarCameraCalibration::DetectCorner
     return corners;
 }
 
-cv::Vec<double, 4> LidarCameraCalibration::SolveCameraPlaneModel()
+std::array<double, 4> LidarCameraCalibration::SolveCameraPlaneModel()
 {
     std::vector<double> r;
     cv::Vec<double, 3> t;
@@ -160,11 +223,11 @@ cv::Vec<double, 4> LidarCameraCalibration::SolveCameraPlaneModel()
     cv::Mat_<double> R;
     cv::Rodrigues(r, R);
 
-    return cv::Vec<double, 4>(
+    return std::array<double, 4>{{
         R(0, 2),
         R(1, 2),
         R(2, 2),
-        t.dot(R.col(2)));
+        t.dot(R.col(2))}};
 }
 
 void LidarCameraCalibration::PublishProcessedImage(ImageConstPtr msg)
@@ -208,31 +271,50 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr LidarCameraCalibration::FilterLastPointCloud
     return cloud;
 }
 
-cv::Vec<double, 4> LidarCameraCalibration::PerformPlaneFit(pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud)
+void LidarCameraCalibration::StoreLidarInliers(pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud, pcl::PointIndices::Ptr indices)
 {
-    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
-    pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+    pcl::ExtractIndices<pcl::PointXYZ> extract;
+    extract.setInputCloud(point_cloud);
+    extract.setIndices(indices);
+    extract.setNegative(false);
+    extract.filter(*point_cloud);
+    
+    this->lidar_inliers.push_back(arma::mat(4, indices->indices.size(), arma::fill::ones));
+    arma::mat& points = this->lidar_inliers.back();
+
+    for (std::vector<pcl::PointXYZ>::size_type i = 0; i < point_cloud->points.size(); ++i)
+    {
+        points(0, i) = point_cloud->points[i].x;
+        points(1, i) = point_cloud->points[i].y;
+        points(2, i) = point_cloud->points[i].z;
+    }
+}
+
+double LidarCameraCalibration::RMSDistanceLidarPointsToCameraPlanes(arma::mat &R, arma::vec &t)
+{
+    return 0.0;
+}
+
+LidarCameraCalibration::PlaneFitResults LidarCameraCalibration::PerformPlaneFit(pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud)
+{
+    PlaneFitResults result;
 
     pcl::SACSegmentation<pcl::PointXYZ> seg;
     seg.setOptimizeCoefficients(true);
     seg.setModelType(pcl::SACMODEL_PLANE);
     seg.setMethodType(pcl::SAC_RANSAC);
-    seg.setDistanceThreshold(0.03);
+    seg.setDistanceThreshold(0.03); // TODO: make this a param
     seg.setInputCloud(point_cloud);
-    seg.segment(*inliers, *coefficients);
+    seg.segment(*result.inliers, *result.coefficients);
 
     // make sure plane normal points in negative x
-    if (coefficients->values[0] > 0) {
-        coefficients->values[0] *= -1;
-        coefficients->values[1] *= -1;
-        coefficients->values[2] *= -1;
+    if (result.coefficients->values[0] > 0) {
+        result.coefficients->values[0] *= -1;
+        result.coefficients->values[1] *= -1;
+        result.coefficients->values[2] *= -1;
     }
 
-    return cv::Vec<double, 4>(
-        coefficients->values[0],
-        coefficients->values[1],
-        coefficients->values[2],
-        coefficients->values[3]);
+    return result;
 }
 
 void PublishPlaneMarker(Point point)
