@@ -15,6 +15,7 @@ find_package(catkin REQUIRED
 
 find_package(OpenCV 3.2 REQUIRED)
 find_package(Armadillo REQUIRED)
+find_package(BLAS REQUIRED)
 
 catkin_package()
 
@@ -25,4 +26,4 @@ include_directories(
 )
 
 add_executable(run_calibration src/lidar_camera_calibration.cpp)
-target_link_libraries(run_calibration ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(run_calibration ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${BLAS_LIBRARIES})
